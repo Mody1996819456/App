@@ -12,7 +12,6 @@ st.title("📊 لوحة القيادة الاحترافية: محلل البيا
 st.markdown("---")
 
 # ===== 2. الشريط الجانبي (الفلاتر الرئيسية) =====
-# كل المدخلات والعناصر التفاعلية يتم وضعها هنا
 st.sidebar.header("تحميل وفلاتر التحليل")
 
 uploaded_file = st.sidebar.file_uploader(
@@ -27,8 +26,10 @@ if uploaded_file is None:
 # قراءة ومعالجة الملف
 try:
     if uploaded_file.name.endswith('.csv'):
+        # قراءة CSV مع افتراض الترميز UTF-8
         df = pd.read_csv(uploaded_file, encoding='utf-8')
     elif uploaded_file.name.endswith('.xlsx'):
+        # استخدام BytesIO للتعامل مع ملفات Excel بشكل أفضل
         df = pd.read_excel(BytesIO(uploaded_file.getvalue()))
     
     st.sidebar.success("✅ تم تحميل الملف بنجاح!")
@@ -59,35 +60,23 @@ tab1, tab2, tab3 = st.tabs(["البيانات الخام", "ملخص الأعم�
 
 with tab1:
     st.dataframe(df.head(), use_container_width=True)
+    st.caption(f"عدد الصفوف الكلي: {len(df)} | عدد الأعمدة: {len(df.columns)}")
 
 with tab2:
-    # عرض أنواع الأعمدة والقيم المتوفرة
+    # الحل الآمن لـ df.info() لمنع TypeError
     non_null_count = df.count()
     missing_percentage = (df.isnull().sum() / len(df)) * 100
     summary_df = pd.DataFrame({
-        'نوع البيانات': df.dtypes,
+        'نوع البيانات (dtype)': df.dtypes,
         'القيم غير المفقودة': non_null_count,
         'نسبة المفقود (%)': missing_percentage.round(2)
     })
     st.dataframe(summary_df, use_container_width=True)
+    st.caption("ملخص يوضح نوع البيانات وعدد القيم المتوفرة في كل عمود.")
 
 with tab3:
     missing_data = df.isnull().sum().reset_index(name='Missing Count')
-    missing_data = missing_data[missing_data['Missing Count'] > 0].sort_values(by='Missing Count', ascending=False)
+    missing_data['Missing Percentage'] = (missing_data['Missing Count'] / len(df)) * 100
+    missing_data = missing_data[missing_data['Missing Count'] > 0].sort_values(by='Missing Percentage', ascending=False)
     if missing_data.empty:
-        st.success("🎉 لا توجد قيم مفقودة.")
-    else:
-        st.warning("⚠️ يوجد قيم مفقودة.")
-        st.dataframe(missing_data, use_container_width=True)
-
-st.markdown("---")
-
-# ===== 5. عرض الرسوم البيانية (Charts) حسب اختيار المستخدم =====
-st.header(f"2. الرسوم البيانية الاحترافية: {analysis_type}")
-
-# --- (A) تحليل متغيرين (Scatter Plot) ---
-if analysis_type == 'تحليل متغيرين (Scatter Plot)':
-    if len(numeric_cols) < 2:
-        st.warning("🚫 يتطلب هذا التحليل عمودين رقميين على الأقل.")
-    else:
-        # فلاتر المحاور في الشريط الجانبي
+        st.success("🎉 لا توجد قيم مفق
